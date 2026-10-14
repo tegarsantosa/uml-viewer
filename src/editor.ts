@@ -156,6 +156,8 @@ const theme = EditorView.theme({
   '.cm-content': { caretColor: 'var(--accent)', padding: '12px 0' },
   '.cm-gutters': { backgroundColor: 'var(--editor-bg)', color: 'var(--muted)', border: 'none' },
   '.cm-activeLineGutter': { backgroundColor: 'var(--editor-active-line)' },
+  // Must stay translucent: the drawn selection layer sits behind the text (z-index -2),
+  // so an opaque active-line background would hide any selection on the cursor's line.
   '.cm-activeLine': { backgroundColor: 'var(--editor-active-line)' },
   '&.cm-focused .cm-cursor': { borderLeftColor: 'var(--accent)' },
   '.cm-selectionBackground': { backgroundColor: 'var(--editor-selection-inactive)' },

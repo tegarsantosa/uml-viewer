@@ -45,7 +45,7 @@
   --hover: rgba(255, 255, 255, 0.07);
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.55);
   --editor-bg: #1e1f22;
-  --editor-active-line: #26282e;
+  --editor-active-line: rgba(200, 215, 255, 0.05);
   --editor-selection: #214283;
   --canvas: #1e1f22;
   --grid: #2b2d31;
@@ -118,7 +118,7 @@
   --hover: rgba(255, 255, 255, 0.06);
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.5);
   --editor-bg: #2b2b2b;
-  --editor-active-line: #323232;
+  --editor-active-line: rgba(255, 255, 255, 0.035);
   --editor-selection: #214283;
   --canvas: #2b2b2b;
   --grid: #353535;
@@ -152,7 +152,7 @@
   --hover: rgba(0, 0, 0, 0.08);
   --shadow: 0 8px 28px rgba(0, 0, 0, 0.3);
   --editor-bg: #ffffff;
-  --editor-active-line: #f0f0f0;
+  --editor-active-line: rgba(0, 0, 0, 0.06);
   --editor-selection: #b3d4ff;
   --canvas: #ffffff;
   --grid: #eeeeee;

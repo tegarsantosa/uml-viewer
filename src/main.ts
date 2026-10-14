@@ -93,9 +93,11 @@ function applyTheme(): void {
 }
 
 // ---------- Rendering ----------
+// Called on every keystroke. Native rendering is cheap, so it follows typing closely;
+// server rendering waits for a longer pause (see renderServer).
 function scheduleRender(): void {
   window.clearTimeout(renderTimer);
-  renderTimer = window.setTimeout(render, 120);
+  renderTimer = window.setTimeout(() => render(true), 120);
 }
 
 function showMessage(text: string, isError = false): void {
@@ -108,7 +110,7 @@ function hideMessage(): void {
   message.hidden = true;
 }
 
-function render(): void {
+function render(typing = false): void {
   const type = detectDiagramType(source);
   const useNative = settings.renderer === 'native' || (settings.renderer === 'auto' && isNativeType(type));
 
@@ -126,7 +128,7 @@ function render(): void {
     window.clearTimeout(serverTimer);
     renderNative();
   } else {
-    renderServer(type);
+    renderServer(type, typing ? SERVER_TYPING_DELAY : SERVER_ACTION_DELAY);
   }
 }
 
@@ -169,30 +171,63 @@ function renderNative(): void {
   else applyView();
 }
 
-function renderServer(type: string): void {
+// Idle time after the last keystroke before the PlantUML server is asked for a render.
+// Keystrokes within this window collapse into one request.
+const SERVER_TYPING_DELAY = 1000;
+// Delay for deliberate actions (example loaded, setting changed): just enough to coalesce bursts.
+const SERVER_ACTION_DELAY = 100;
+
+let serverShownUrl = '';          // URL of the image currently in the viewport
+let serverInFlightUrl: string | null = null; // URL of the request currently loading
+let serverPendingType: string | null = null; // a newer render is wanted once the current one lands
+
+function renderServer(type: string, delay: number): void {
   window.clearTimeout(serverTimer);
   statusMode.textContent = `PlantUML server · ${type} diagram`;
-  statusStats.textContent = 'Rendering…';
   setWarnings([]);
-  serverTimer = window.setTimeout(() => {
-    const url = plantUmlUrl(settings.plantumlServer, source, 'svg');
-    const img = new Image();
-    img.alt = 'Diagram rendered by PlantUML server';
-    img.onload = () => {
-      viewport.replaceChildren(img);
-      lastResult = null;
-      lastMode = 'server';
-      hideMessage();
-      statusStats.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
-      if (autoFit) fitToView();
-      else applyView();
-    };
-    img.onerror = () => {
-      showMessage('The PlantUML server could not be reached. Check your connection or the server URL in Settings.', true);
-      statusStats.textContent = 'Failed';
-    };
-    img.src = url;
-  }, 450);
+  serverTimer = window.setTimeout(() => requestServerRender(type), delay);
+}
+
+function requestServerRender(type: string): void {
+  const url = plantUmlUrl(settings.plantumlServer, source, 'svg');
+
+  // Nothing new to show: the exact same diagram is already on screen.
+  if (lastMode === 'server' && url === serverShownUrl) return;
+
+  // Only one request at a time. If one is loading, remember that a newer render is wanted
+  // and fire it when the current one finishes, instead of stacking requests on the server.
+  if (serverInFlightUrl !== null) {
+    if (url !== serverInFlightUrl) serverPendingType = type;
+    return;
+  }
+
+  serverInFlightUrl = url;
+  statusStats.textContent = 'Rendering…';
+  const img = new Image();
+  img.alt = 'Diagram rendered by PlantUML server';
+  const finish = () => {
+    serverInFlightUrl = null;
+    const pending = serverPendingType;
+    serverPendingType = null;
+    if (pending !== null) requestServerRender(pending);
+  };
+  img.onload = () => {
+    viewport.replaceChildren(img);
+    serverShownUrl = url;
+    lastResult = null;
+    lastMode = 'server';
+    hideMessage();
+    statusStats.textContent = `${img.naturalWidth} × ${img.naturalHeight}`;
+    if (autoFit) fitToView();
+    else applyView();
+    finish();
+  };
+  img.onerror = () => {
+    showMessage('The PlantUML server could not be reached. Check your connection or the server URL in Settings.', true);
+    statusStats.textContent = 'Failed';
+    finish();
+  };
+  img.src = url;
 }
 
 // ---------- Warnings ----------
